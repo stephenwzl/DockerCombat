@@ -13,9 +13,8 @@ Docker 实战入门
 # Docker Compose项目实战
 
 * 一个 Node.js的 Demo工程
-* docker-compose 容器编排概念
+* docker-compose 容器编排
 * 部署环境的容器构建
-* 容器之间的联接
 
 
 ## 镜像和容器
@@ -124,3 +123,44 @@ docker build -t stephenwzl/redis:test .
 ## push镜像  
 要把自建的镜像给别人用，需要 push到一个中心（hub），Docker官方的是 hub.docker.com。我们只需要注册一个账号，然后在命令行执行 `docker login`，登录成功后再 `docker push your_name/redis:test`，就可以把刚才的镜像推上去了，别人也就能拉到了。  
 
+
+## 一个 Node.js的 Demo工程  
+我们建立一个简单的 Node.js express demo，来表示我们正在开发一个 Web 应用。具体代码在 `nodejs-project/index.js`下。  
+我在里面写了一个 MongoDB的链接，当你启动服务时就连接数据库，并在连接成功时进行 console log。  
+这时候的需求是我们要把这个 Web应用用 Docker部署在服务器上。
+
+## docker-compose 容器编排
+docker-compose 的概念就是通过一个配置文件，规定要运行几个容器，每个容器的镜像在哪，端口映射怎样。当然还有容器之间的连接。  
+看一下 docker-compose.yml  
+
+```
+version: '2'
+services:
+  mongodb:
+    image: mongo
+  server:
+    build: .
+    ports: 
+      - "3000:3000"
+    volumes:
+      - .:/code
+    links:
+      - "mongodb:mongodb"
+```  
+
+首先 services指定了下面每一个 key都是一个容器。  
+第一个 mongodb，指定了它运行的镜像是 mongo:latest  
+第二个要着重讲一下，这是我们的 nodejs应用要跑的容器。它没指定现成的镜像，而是 `build: .`，表示 build当前目录下的 Dockerfile  
+ports表示的端口映射，表示运行时把 localhost:3000和容器的 3000映射  
+volumes 表示目录映射，表示把当前目录映射到容器的 `/code`目录  
+links 表示和其他容器的连接。规则是 "service_name:alias"，前者是service名，我写在前面的 mongodb service，后者是别名，表示在 server这个容器里面的地址是 `mongodb`，所以我在 index.js里面的连接地址是 `mongodb://mongodb/test`, 连接别名其实是以 hosts实现的， mongodb这个别名就代表着 server容器里面的一个 10.x开头的内网 ip。  
+
+## 部署环境的容器构建  
+运行命令 `docker-compose up`， 两个容器就会自动构建/运行，不需要你手动去 build镜像再运行。添加`-d`参数后就会以后台模式运行。  
+  
+```
+# build所有镜像  
+docker-compose build
+# 停止/重启所有容器  
+docker-compose stop
+```

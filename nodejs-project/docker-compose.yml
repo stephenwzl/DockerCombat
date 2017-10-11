@@ -1,0 +1,12 @@
+version: '2'
+services:
+  mongodb:
+    image: mongo
+  server:
+    build: .
+    ports: 
+      - "3000:3000"
+    volumes:
+      - .:/code
+    links:
+      - "mongodb:mongodb"
